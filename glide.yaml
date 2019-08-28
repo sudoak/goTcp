@@ -1,2 +1,9 @@
 package: goTcpAyasta
-import: []
+import:
+- package: github.com/mongodb/mongo-go-driver
+  version: v1.1.0
+- package: go.mongodb.org/mongo-driver
+  version: v1.1.0
+  subpackages:
+  - bson
+  - mongo@~1.1.0

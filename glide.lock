@@ -1,16 +1,19 @@
-hash: 116d7adfb487901bdcf6e3dee37b2ab6f0fef8786f2c3b8a066db9b57bce615c
-updated: 2019-08-28T16:09:43.214434+05:30
+hash: 06c4b19015c0c57823e845f3279ad89e3adfa5421e00a83706b957da9e7f97d7
+updated: 2019-09-03T13:35:50.690405+05:30
 imports:
+- name: github.com/360EntSecGroup-Skylar/excelize
+  version: dc8210d4a7d18f6425f6f18dc383b26778883715
 - name: github.com/go-stack/stack
   version: 2fee6af1a9795aafbe0253a0cfbdf668e1fb8a9a
 - name: github.com/golang/snappy
   version: 2a8bb927dd31d8daada140a5d09578521ce5c36a
+- name: github.com/mohae/deepcopy
+  version: c48cc78d482608239f6c4c92a4abd87eb8761c90
 - name: github.com/mongodb/mongo-go-driver
   version: d42ea7239f0db8a61e77191b9f2730a922459042
   subpackages:
   - bson/primitive
   - mongo
-  - mongo/options
 - name: github.com/xdg/scram
   version: 7eeb5667e42c09cb51bf7b7c28aea8c56767da90
 - name: github.com/xdg/stringprep
@@ -47,7 +50,7 @@ imports:
   - x/mongo/driver/uuid
   - x/mongo/driver/wiremessage
 - name: golang.org/x/crypto
-  version: 60c769a6c58655dab1b9adac0d58967dd517cfba
+  version: 9756ffdc24725223350eb3266ffb92590d28f278
   subpackages:
   - pbkdf2
 - name: golang.org/x/sync
@@ -55,7 +58,7 @@ imports:
   subpackages:
   - semaphore
 - name: golang.org/x/text
-  version: 342b2e1fbaa52c93f31447ad2c6abc048c63e475
+  version: 3d0f7978add91030e5e8976ff65ccdd828286cba
   subpackages:
   - transform
   - unicode/norm

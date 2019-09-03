@@ -7,15 +7,19 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/360EntSecGroup-Skylar/excelize"
 	"github.com/mongodb/mongo-go-driver/bson/primitive"
 	"github.com/mongodb/mongo-go-driver/mongo"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const (
+	// host     = "142.93.210.144"
 	host     = "localhost"
 	port     = "3333"
 	connType = "tcp"
@@ -36,10 +40,16 @@ type Device struct {
 	TimeStamp string             `json:"timestamp" bson:"timestamp"`
 }
 
+type fields struct {
+	ID int `bson:"_id"`
+}
+
 func main() {
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	go pollDB(time.Minute)
+
+	// ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	clientOptions := options.Client().ApplyURI("mongodb://sudoak:sudoak1@ds237337.mlab.com:37337/askak?retryWrites=false")
-	client, _ = mongo.Connect(ctx, clientOptions)
+	client, _ = mongo.Connect(context.Background(), clientOptions)
 
 	fmt.Println("Connected to MongoDB!")
 
@@ -62,6 +72,7 @@ func main() {
 		// Handle connections in a new goroutine.
 		go handleRequest(conn)
 	}
+
 }
 
 func handleRequest(conn net.Conn) {
@@ -70,7 +81,7 @@ func handleRequest(conn net.Conn) {
 	message = strings.Trim(string(message), "$#")
 
 	tempContent := strings.Split(string(message), ",")
-
+	fmt.Println(tempContent)
 	if len(tempContent) == 8 {
 		var temp Device
 		temp.DeviceID = tempContent[1]
@@ -85,10 +96,9 @@ func handleRequest(conn net.Conn) {
 		temp.TimeStamp = t.Format("2006-01-02 15:04:05")
 		temp.Date = t.Format("2006-01-02")
 		temp.Time = t.Format("15:04:05")
-		fmt.Println(temp)
+		fmt.Printf("value=> %v", temp)
 		collection := client.Database("askak").Collection("ceps")
-		ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-		result, err := collection.InsertOne(ctx, temp)
+		result, err := collection.InsertOne(context.Background(), temp)
 		fmt.Println(result)
 		if err != nil {
 			log.Printf("err = %v : time = %v", err.Error(), t.Format("2006-01-02 15:04:05"))
@@ -100,4 +110,82 @@ func handleRequest(conn net.Conn) {
 	conn.Write([]byte("Message received."))
 	// Close the connection when you're done with it.
 	conn.Close()
+}
+
+func pollDB(d time.Duration) {
+	ticker := time.NewTicker(d)
+	go func() {
+		for {
+			select {
+			case t := <-ticker.C:
+				fmt.Println("Tick at", t)
+				var dev []*Device
+				collection := client.Database("askak").Collection("ceps")
+				// ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+				projection := fields{
+					ID: 0,
+				}
+				result, err := collection.Find(context.TODO(), bson.D{}, options.Find().SetProjection(projection))
+				if err != nil {
+					log.Fatal(err)
+				}
+				// fmt.Println(result)
+				for result.Next(context.TODO()) {
+					var d Device
+					err = result.Decode(&d)
+					if err != nil {
+						log.Fatal("Error on Decoding the document", err)
+					}
+					dev = append(dev, &d)
+				}
+				if err := result.Err(); err != nil {
+					log.Fatal(err)
+				}
+
+				// Close the cursor once finished
+				result.Close(context.TODO())
+				go makeExcelSheet(dev)
+
+			}
+		}
+	}()
+}
+
+func makeExcelSheet(data []*Device) {
+	f := excelize.NewFile()
+	f.SetCellValue("Sheet1", "A1", "Devide ID")
+	f.SetCellValue("Sheet1", "B1", "TImeStamp")
+	f.SetCellValue("Sheet1", "C1", "Value(v)")
+	for i, v := range data {
+		f.SetCellValue("Sheet1", fmt.Sprintf("A%v", i+2), v.DeviceID)
+		f.SetCellValue("Sheet1", fmt.Sprintf("B%v", i+2), v.TimeStamp)
+		f.SetCellValue("Sheet1", fmt.Sprintf("C%v", i+2), v.E1)
+	}
+	errRemoveContents := removeContents("./files/")
+	if errRemoveContents != nil {
+		fmt.Println(errRemoveContents)
+	}
+	err := f.SaveAs("./files/ayasta.xlsx")
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+func removeContents(dir string) error {
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	names, err := d.Readdirnames(-1)
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		err = os.RemoveAll(filepath.Join(dir, name))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

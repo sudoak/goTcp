@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"handlers"
 	"log"
 	"net"
 	"os"
@@ -93,9 +94,10 @@ func handleRequest(conn net.Conn) {
 		temp.E5 = tempContent[7]
 
 		t := time.Now()
-		temp.TimeStamp = t.Format("2006-01-02 15:04:05")
-		temp.Date = t.Format("2006-01-02")
-		temp.Time = t.Format("15:04:05")
+		tt, _ := handlers.TimeIn(t, "Asia/Kolkata")
+		temp.TimeStamp = tt.Format("2006-01-02 15:04:05")
+		temp.Date = tt.Format("2006-01-02")
+		temp.Time = tt.Format("15:04:05")
 		fmt.Printf("value=> %v", temp)
 		collection := client.Database("askak").Collection("ceps")
 		result, err := collection.InsertOne(context.Background(), temp)
@@ -103,6 +105,7 @@ func handleRequest(conn net.Conn) {
 		if err != nil {
 			log.Printf("err = %v : time = %v", err.Error(), t.Format("2006-01-02 15:04:05"))
 		}
+
 		return
 	}
 
@@ -125,7 +128,11 @@ func pollDB(d time.Duration) {
 				projection := fields{
 					ID: 0,
 				}
-				result, err := collection.Find(context.TODO(), bson.D{}, options.Find().SetProjection(projection))
+				// queryTime := time.Now()
+				// queryTimeT, _ := handlers.TimeIn(queryTime, "Asia/Kolkata")
+				// dateToQuery := queryTimeT.Format("2006-01-02")
+
+				result, err := collection.Find(context.TODO(), bson.D{{"device_id", "IOC1"}}, options.Find().SetProjection(projection))
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -155,11 +162,19 @@ func makeExcelSheet(data []*Device) {
 	f := excelize.NewFile()
 	f.SetCellValue("Sheet1", "A1", "Devide ID")
 	f.SetCellValue("Sheet1", "B1", "TImeStamp")
-	f.SetCellValue("Sheet1", "C1", "Value(v)")
+	f.SetCellValue("Sheet1", "C1", "Value(v) E1")
+	f.SetCellValue("Sheet1", "D1", "Value(v) E2")
+	f.SetCellValue("Sheet1", "E1", "Value(v) E3")
+	f.SetCellValue("Sheet1", "F1", "Value(v) E4")
+	f.SetCellValue("Sheet1", "G1", "Value(v) E5")
 	for i, v := range data {
 		f.SetCellValue("Sheet1", fmt.Sprintf("A%v", i+2), v.DeviceID)
 		f.SetCellValue("Sheet1", fmt.Sprintf("B%v", i+2), v.TimeStamp)
 		f.SetCellValue("Sheet1", fmt.Sprintf("C%v", i+2), v.E1)
+		f.SetCellValue("Sheet1", fmt.Sprintf("D%v", i+2), v.E2)
+		f.SetCellValue("Sheet1", fmt.Sprintf("E%v", i+2), v.E3)
+		f.SetCellValue("Sheet1", fmt.Sprintf("F%v", i+2), v.E4)
+		f.SetCellValue("Sheet1", fmt.Sprintf("G%v", i+2), v.E5)
 	}
 	errRemoveContents := removeContents("./files/")
 	if errRemoveContents != nil {
